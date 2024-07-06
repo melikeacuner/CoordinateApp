@@ -8,7 +8,7 @@ namespace CoordinateApp.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class CoordinateController : ControllerBase
+    public class CoordinateController : ControllerBase //test
     {
         private static readonly List<Coordinate> CoordinateList = new List<Coordinate>();
         private static readonly ICoordinateService _coordinateService = new CoordinateService("Server=localhost;Port=5432;Database=CoordinateDb;UserId=postgres;Password=admin;");
