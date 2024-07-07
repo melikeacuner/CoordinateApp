@@ -1,14 +1,11 @@
 ﻿
-using System.ComponentModel.DataAnnotations;
+using CoordinateApp.Entity;
 
-namespace CoordinateApp.Models
+namespace CoordinateApp.Models;
+
+public class Coordinate : BaseEntity
 {
-    public class Coordinate
-    {
-        [Key]
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public int X { get; set; }
-        public int Y { get; set; }
-        public string Name { get; set; }
-    }
+    public int X { get; set; }
+    public int Y { get; set; }
+    public string Name { get; set; }
 }
