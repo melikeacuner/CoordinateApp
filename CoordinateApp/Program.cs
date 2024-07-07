@@ -1,20 +1,28 @@
-using CoordinateApp.Abstract;
-using CoordinateApp.Concrete;
 using CoordinateApp.DataAccess;
+using CoordinateApp.Repositories.Abstract;
+using CoordinateApp.Repositories.Concrete;
+using CoordinateApp.Services.Abstract;
+using CoordinateApp.Services.Concrete;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
-//builder.Configuration.AddJsonFile("app-settings.json");
-
 // Add services to the container.
 
-//builder.Services.AddSingleton<ICoordinateService, CoordinateService>();
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
+builder.Services.AddDbContext<CoordinatesDbContext>(Options =>
+{
+    Options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+
+builder.Services.AddScoped<ICoordinateService, CoordinateService>();
+builder.Services.AddScoped<ICoordinateRepository, CoordinateRepository>();
 
 var app = builder.Build();
 
