@@ -1,3 +1,4 @@
+using CoordinateApp;
 using CoordinateApp.DataAccess;
 using CoordinateApp.Repositories.Abstract;
 using CoordinateApp.Repositories.Concrete;
@@ -13,6 +14,7 @@ builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddAutoMapper(typeof(DtoMapper).Assembly);
 
 builder.Configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 

@@ -1,4 +1,5 @@
-﻿using CoordinateApp.Entity.Dto;
+﻿using AutoMapper;
+using CoordinateApp.Entity.Dto;
 using CoordinateApp.Models;
 using CoordinateApp.Services.Abstract;
 using Microsoft.AspNetCore.Mvc;
@@ -10,11 +11,13 @@ namespace CoordinateApp.Controllers
     public class CoordinateController : ControllerBase
     {
         private readonly ICoordinateService _coordinateService;
-        public CoordinateController(ICoordinateService service)
+        private readonly IMapper _mapper;
+        public CoordinateController(ICoordinateService service, IMapper mapper)
         {
             _coordinateService = service;
+            _mapper = mapper;
         }
-
+     
         [HttpGet]
         public Response GetAll()
         {
@@ -28,9 +31,10 @@ namespace CoordinateApp.Controllers
         }
 
         [HttpPost]
-        public Response Add([FromBody] Coordinate k)
+        public Response Add([FromBody] CoordinateAddDto CoordinateAddDto)
         {
-            return _coordinateService.Add(k);
+            Coordinate coordinate = _mapper.Map<Coordinate>(CoordinateAddDto);
+            return _coordinateService.Add(coordinate);
         }
 
         [HttpPut]
