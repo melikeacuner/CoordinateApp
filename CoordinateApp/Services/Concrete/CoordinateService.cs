@@ -8,10 +8,12 @@ namespace CoordinateApp.Services.Concrete
     public class CoordinateService : ICoordinateService
     {
         private readonly ICoordinateRepository _coordinateRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public CoordinateService(ICoordinateRepository coordinateRepository)
+        public CoordinateService(ICoordinateRepository coordinateRepository, IUnitOfWork unitOfWork)
         {
             _coordinateRepository = coordinateRepository;
+            _unitOfWork = unitOfWork;
         }
 
         public Response Add(Coordinate k)
@@ -27,6 +29,7 @@ namespace CoordinateApp.Services.Concrete
                 result.IsSucces = true;
                 result.Data = k;
                 result.Message = "Added new coordinate";
+                _unitOfWork.Commit();
             }
             catch (Exception ex)
             {
@@ -49,6 +52,7 @@ namespace CoordinateApp.Services.Concrete
 
                 result.IsSucces = true;
                 result.Message = "Coordinate Deleted";
+                _unitOfWork.Commit();
             }
             catch (Exception ex)
             {
@@ -57,7 +61,6 @@ namespace CoordinateApp.Services.Concrete
             }
             return result;
         }
-
 
         public Response GetById(Guid id)
         {
@@ -82,6 +85,7 @@ namespace CoordinateApp.Services.Concrete
 
             return result;
         }
+
         public Response GetAll()
         {
             var result = new Response();
@@ -99,6 +103,7 @@ namespace CoordinateApp.Services.Concrete
             }
             return result;
         }
+
         public Response Update(Coordinate korFromReq)
         {
             var result = new Response();
@@ -113,6 +118,7 @@ namespace CoordinateApp.Services.Concrete
                 result.IsSucces = true;
                 result.Data = korFromReq;
                 result.Message = "Coordinate Updated";
+                _unitOfWork.Commit();
             }
             catch (Exception ex)
             {

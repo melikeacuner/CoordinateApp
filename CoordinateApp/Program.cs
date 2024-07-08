@@ -25,6 +25,7 @@ builder.Services.AddDbContext<CoordinatesDbContext>(Options =>
 
 builder.Services.AddScoped<ICoordinateService, CoordinateService>();
 builder.Services.AddScoped<ICoordinateRepository, CoordinateRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 var app = builder.Build();
 

@@ -17,7 +17,7 @@ public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
     public bool Add(T entity)
     {
         _dbSet.Add(entity);
-        return _context.SaveChanges() > 0;
+        return _context.SaveChanges() > 0 ;
     }
 
     public bool Delete(Guid id)
