@@ -1,5 +1,5 @@
 ﻿using CoordinateApp.DataAccess;
-using CoordinateApp.Models;
+using CoordinateApp.Entity;
 using CoordinateApp.Repositories.Abstract;
 
 namespace CoordinateApp.Repositories.Concrete;

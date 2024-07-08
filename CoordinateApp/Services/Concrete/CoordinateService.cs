@@ -1,35 +1,47 @@
-﻿using CoordinateApp.Entity.Dto;
-using CoordinateApp.Models;
-using CoordinateApp.Repositories.Abstract;
+﻿using AutoMapper;
+using CoordinateApp.Entity;
+using CoordinateApp.Entity.Dto;
 using CoordinateApp.Services.Abstract;
+
 
 namespace CoordinateApp.Services.Concrete
 {
     public class CoordinateService : ICoordinateService
     {
-        private readonly ICoordinateRepository _coordinateRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IMapper _mapper;
 
-        public CoordinateService(ICoordinateRepository coordinateRepository, IUnitOfWork unitOfWork)
+        public CoordinateService(IUnitOfWork unitOfWork, IMapper mapper)
         {
-            _coordinateRepository = coordinateRepository;
             _unitOfWork = unitOfWork;
+            _mapper = mapper;
         }
 
-        public Response Add(Coordinate k)
+        public Response Add(CoordinateAddDto coordinateAddDto)
         {
+            var coordinate = _mapper.Map<Coordinate>(coordinateAddDto);
             var result = new Response();
             try
             {
-                if (!_coordinateRepository.Add(k))
+                using (_unitOfWork)
                 {
-                    result.Message = "There is no change on db";
-                    return result;
+                    if (!_unitOfWork.CoordinateRepository.Add(coordinate))
+                    {
+                        result.Message = "Null object sent!";
+                        return result;
+                    }
+
+                    if (!(_unitOfWork.Commit() > 0))
+                    {
+                        result.Message = "There is no change on db";
+                        result.IsSucces = false;
+                        return result;
+                    }
+
+                    result.IsSucces = true;
+                    result.Data = coordinateAddDto;
+                    result.Message = "Added new coordinate";
                 }
-                result.IsSucces = true;
-                result.Data = k;
-                result.Message = "Added new coordinate";
-                _unitOfWork.Commit();
             }
             catch (Exception ex)
             {
@@ -44,15 +56,24 @@ namespace CoordinateApp.Services.Concrete
             var result = new Response();
             try
             {
-                if (!_coordinateRepository.Delete(id))
+                using (_unitOfWork)
                 {
-                    result.Message = "There is no change on db";
-                    return result;
-                }
+                    if (!_unitOfWork.CoordinateRepository.Delete(id))
+                    {
+                        result.Message = "Null object sent!";
+                        return result;
+                    }
 
-                result.IsSucces = true;
-                result.Message = "Coordinate Deleted";
-                _unitOfWork.Commit();
+                    if (!(_unitOfWork.Commit() > 0))
+                    {
+                        result.Message = "There is no change on db";
+                        result.IsSucces = false;
+                        return result;
+                    }
+
+                    result.IsSucces = true;
+                    result.Message = "Coordinate Deleted";
+                }
             }
             catch (Exception ex)
             {
@@ -67,15 +88,18 @@ namespace CoordinateApp.Services.Concrete
             var result = new Response();
             try
             {
-                var coordinateFromDb = _coordinateRepository.GetById(id);
-                if (coordinateFromDb == null)
+                using (_unitOfWork)
                 {
-                    result.Message = "Not Found !";
-                    return result;
+                    var coordinateFromDb = _unitOfWork.CoordinateRepository.GetById(id);
+                    if (coordinateFromDb == null)
+                    {
+                        result.Message = "Not Found !";
+                        return result;
+                    }
+                    result.IsSucces = true;
+                    result.Message = "OK";
+                    result.Data = coordinateFromDb;
                 }
-                result.IsSucces = true;
-                result.Message = "OK";
-                result.Data = coordinateFromDb;
             }
             catch (Exception ex)
             {
@@ -91,10 +115,13 @@ namespace CoordinateApp.Services.Concrete
             var result = new Response();
             try
             {
-                var coordinates = _coordinateRepository.GetAll();
-                result.Data = coordinates;
-                result.IsSucces = true;
-                result.Message = "OK";
+                using (_unitOfWork)
+                {
+                    var coordinates = _unitOfWork.CoordinateRepository.GetAll();
+                    result.Data = coordinates;
+                    result.IsSucces = true;
+                    result.Message = "OK";
+                }
             }
             catch (Exception ex)
             {
@@ -104,21 +131,32 @@ namespace CoordinateApp.Services.Concrete
             return result;
         }
 
-        public Response Update(Coordinate korFromReq)
+        public Response Update(CoordinateUpdateDto korFromReq)
         {
             var result = new Response();
             try
             {
-                if (!_coordinateRepository.Update(korFromReq))
+                using (_unitOfWork)
                 {
-                    result.IsSucces = false;
-                    result.Message = "Zero rows affected !";
-                    return result;
+                    var coordinate = _mapper.Map<Coordinate>(korFromReq);
+                    if (!_unitOfWork.CoordinateRepository.Update(coordinate))
+                    {
+                        result.IsSucces = false;
+                        result.Message = "Record not found!";
+                        return result;
+                    }
+
+                    if (!(_unitOfWork.Commit() > 0))
+                    {
+                        result.Message = "There is no change on db";
+                        result.IsSucces = false;
+                        return result;
+                    }
+
+                    result.IsSucces = true;
+                    result.Data = korFromReq;
+                    result.Message = "Coordinate Updated";
                 }
-                result.IsSucces = true;
-                result.Data = korFromReq;
-                result.Message = "Coordinate Updated";
-                _unitOfWork.Commit();
             }
             catch (Exception ex)
             {

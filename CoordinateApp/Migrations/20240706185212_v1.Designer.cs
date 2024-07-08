@@ -25,7 +25,7 @@ namespace CoordinateApp.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("CoordinateApp.Models.Coordinate", b =>
+            modelBuilder.Entity("CoordinateApp.Entity.Coordinate", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()

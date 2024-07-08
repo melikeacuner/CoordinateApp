@@ -8,16 +8,21 @@ namespace CoordinateApp
     {
         private CoordinateRepository _coordinateRepository;
         private readonly CoordinatesDbContext _context;
-        
-        public ICoordinateRepository CoordinateRepository => _coordinateRepository = _coordinateRepository ?? new CoordinateRepository(_context);
-
         public UnitOfWork(CoordinatesDbContext context)
         {
             _context = context;
         }
-        public void Commit()
+        
+        public ICoordinateRepository CoordinateRepository => _coordinateRepository = _coordinateRepository ?? new CoordinateRepository(_context);
+
+        public int Commit()
         {
-            _context.SaveChanges() ;
+            return _context.SaveChanges();
+        }
+
+        public void Dispose()
+        {
+            _context.Dispose();
         }
     }
 }

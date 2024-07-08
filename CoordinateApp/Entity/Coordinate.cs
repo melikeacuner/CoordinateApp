@@ -1,7 +1,7 @@
 ﻿
 using CoordinateApp.Entity;
 
-namespace CoordinateApp.Models;
+namespace CoordinateApp.Entity;
 
 public class Coordinate : BaseEntity
 {

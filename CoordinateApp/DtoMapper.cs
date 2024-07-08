@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using CoordinateApp.Entity.Dto;
-using CoordinateApp.Models;
+using CoordinateApp.Entity;
 
 namespace CoordinateApp
 {
@@ -8,8 +8,8 @@ namespace CoordinateApp
     {
         public DtoMapper()
         {
-            CreateMap<Coordinate, CoordinateAddDto>();
-            CreateMap<CoordinateAddDto, Coordinate>();
+            CreateMap<Coordinate, CoordinateAddDto>().ReverseMap();
+            CreateMap<Coordinate, CoordinateUpdateDto>().ReverseMap();
         }
     }
 }

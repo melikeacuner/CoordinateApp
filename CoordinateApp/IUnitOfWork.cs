@@ -2,9 +2,9 @@
 
 namespace CoordinateApp
 {
-    public interface IUnitOfWork
+    public interface IUnitOfWork : IDisposable
     {
         ICoordinateRepository CoordinateRepository { get; }
-        void Commit();
+        public int Commit();
     }
 }

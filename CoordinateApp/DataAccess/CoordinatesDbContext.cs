@@ -1,4 +1,4 @@
-﻿using CoordinateApp.Models;
+﻿using CoordinateApp.Entity;
 using Microsoft.EntityFrameworkCore;
 
 namespace CoordinateApp.DataAccess;

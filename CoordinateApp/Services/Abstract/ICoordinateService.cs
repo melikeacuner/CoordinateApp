@@ -1,5 +1,5 @@
-﻿using CoordinateApp.Entity.Dto;
-using CoordinateApp.Models;
+﻿using CoordinateApp.Entity;
+using CoordinateApp.Entity.Dto;
 
 namespace CoordinateApp.Services.Abstract
 {
@@ -7,8 +7,8 @@ namespace CoordinateApp.Services.Abstract
     {
         public Response GetAll();
         public Response GetById(Guid id);
-        public Response Add(Coordinate coordinate);
-        public Response Update(Coordinate coordinate);
+        public Response Add(CoordinateAddDto coordinateAddDto);
+        public Response Update(CoordinateUpdateDto coordinateUpdateDto); 
         public Response Delete(Guid id);
     }
 }
