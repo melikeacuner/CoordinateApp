@@ -11,7 +11,6 @@ import DataTable from 'datatables.net-dt';
 import Overlay from 'ol/Overlay.js';
 import { toLonLat } from 'ol/proj.js';
 
-// Global variables and constants
 const iconStyle = new Style({
   image: new Icon({
     src: 'location-pin.png',
@@ -20,7 +19,6 @@ const iconStyle = new Style({
 });
 
 const vectorSource = new VectorSource();
-
 const vectorLayer = new VectorLayer({
   source: vectorSource,
 });
@@ -28,9 +26,8 @@ const vectorLayer = new VectorLayer({
 const popupContainer = document.getElementById('popup');
 const popupContent = document.getElementById('popup-content');
 const popupCloser = document.getElementById('popup-closer');
-let dataSet = [];
+let dataTableInstance = null;
 
-// Create map function
 function createMap() {
   return new Map({
     target: 'map',
@@ -45,7 +42,6 @@ function createMap() {
   });
 }
 
-// Create popup overlay function
 function createPopupOverlay() {
   const overlay = new Overlay({
     element: popupContainer,
@@ -66,18 +62,15 @@ function createPopupOverlay() {
 }
 
 function flyTo(location, view, done) {
-  const duration = 2000;
-  const currentZoom = view.getZoom();
-  const targetZoom = currentZoom + 3; // Örneğin, mevcut zoom seviyesine 1 ekleyerek bir sonraki zoom seviyesine geçmek istiyoruz
+  const duration = 1000;
+  const targetZoom = view.getZoom() + 2; // Hedef zoom seviyesi
 
   let parts = 2;
   let called = false;
 
   function callback(complete) {
     --parts;
-    if (called) {
-      return;
-    }
+    if (called) return;
     if (parts === 0 || !complete) {
       called = true;
       done(complete);
@@ -85,42 +78,35 @@ function flyTo(location, view, done) {
   }
 
   view.animate(
-    {
-      center: location,
-      duration: duration,
-    },
-    callback,
-  );
-
-  view.animate(
-    {
-      zoom: targetZoom,
-      duration: duration,
-    },
-    callback,
+    { center: location, duration: duration },
+    { zoom: targetZoom, duration: duration }, // Hedef zoom seviyesine git
+    callback
   );
 }
 
-// Update DataTable function
-let dataTableInstance = null; // Global değişken olarak tanımlanabilir
 
-function updateDataTable(map, view, modal) {
+function initializeDataTable(map, view, modal) {
   if (!dataTableInstance) {
     dataTableInstance = new DataTable('#example', {
+      ajax: {
+        url: 'https://localhost:7201/api/Coordinate',
+        dataSrc: 'data'
+      },
       columns: [
-        { title: 'Name' },
-        { title: 'Coordinate_X' },
-        { title: 'Coordinate_Y' },
+        { data: 'name', title: 'Name' },
+        { data: 'x', title: 'Coordinate_X' },
+        { data: 'y', title: 'Coordinate_Y' },
+        { data: 'id', title: 'ID', visible: false }, // Gizli ID sütunu
         {
           title: 'Edit',
           render: function (data, type, row) {
-            return '<button class="edit-btn">Edit</button>';
+            return `<button class="edit-btn" data-id="${row.id}">Edit</button>`;
           },
         },
         {
           title: 'Delete',
           render: function (data, type, row) {
-            return '<button class="delete-btn">Delete</button>';
+            return `<button class="delete-btn" data-id="${row.id}">Delete</button>`;
           },
         },
         {
@@ -129,47 +115,57 @@ function updateDataTable(map, view, modal) {
             return '<button class="zoom-btn" data-index="' + meta.row + '">Zoom</button>';
           },
         },
-      ],
-      data: dataSet,
+      ]
     });
 
+    document.querySelector('#example').addEventListener('click', function (event) {
+      if (event.target.classList.contains('zoom-btn')) {
+        const index = event.target.getAttribute('data-index');
+        const coordX = parseFloat(dataTableInstance.row(index).data().x);
+        const coordY = parseFloat(dataTableInstance.row(index).data().y);
+        const location = [coordX, coordY];
+
+        modal.style.display = 'none';
+        flyTo(location, view, function () {});
+      }
+
+      if (event.target.classList.contains('edit-btn')) {
+        const id = event.target.getAttribute('data-id');
+        const rowData = dataTableInstance.row($(event.target).parents('tr')).data();
+
+        document.getElementById('edit-name').value = rowData.name;
+        document.getElementById('edit-x').value = rowData.x;
+        document.getElementById('edit-y').value = rowData.y;
+        document.getElementById('edit-id').value = rowData.id;
+
+        document.getElementById('editModal').style.display = 'block';
+      }
+
+      if (event.target.classList.contains('delete-btn')) {
+        const id = event.target.getAttribute('data-id');
+        const rowData = dataTableInstance.row($(event.target).parents('tr')).data();
+
+        if (confirm(`Are you sure you want to delete the coordinate: ${rowData.name}?`)) {
+          deleteCoordinate(id);
+        }
+      }
+    });
   } else {
-    // DataTable instance already exists, update data only
-    dataTableInstance.clear().rows.add(dataSet).draw();
+    dataTableInstance.ajax.reload();
   }
-
-  // Add click listener to zoom buttons
-  const zoomButtons = document.querySelectorAll('.zoom-btn');
-  zoomButtons.forEach((button) => {
-    button.addEventListener('click', function () {
-      const index = this.getAttribute('data-index');
-      const coordX = parseFloat(dataSet[index][1]);
-      const coordY = parseFloat(dataSet[index][2]);
-
-      const location = [coordX, coordY];
-
-      // Close modal
-      modal.style.display = 'none';
-
-      // Zoom to location
-      flyTo(location, view, function () {});
-    });
-  });
 }
 
-// Fetch coordinates from API function
 async function fetchCoordinates() {
   try {
     const response = await axios.get('https://localhost:7201/api/Coordinate');
     return response.data.data;
   } catch (error) {
     console.error('Error fetching features:', error);
-    return []; // Return empty array on error
+    return [];
   }
 }
 
-// Add icons to map function
-function addIconsToMap(coordinates, vectorSource, iconStyle, dataSet, map, modal) {
+function addIconsToMap(coordinates, vectorSource, iconStyle) {
   coordinates.forEach(coord => {
     const point = new Feature({
       geometry: new Point([coord.x, coord.y]),
@@ -180,21 +176,15 @@ function addIconsToMap(coordinates, vectorSource, iconStyle, dataSet, map, modal
     point.setStyle(iconStyle);
     point.setProperties({ 'id': coord.id, 'name': coord.name });
     vectorSource.addFeature(point);
-
-    dataSet.push([coord.name, coord.x, coord.y, coord.id]);
   });
-
-  updateDataTable(map, map.getView(), modal); // Update DataTable
 }
 
-// Add click listener to map function
 function addMapClickListener(map, popupOverlay) {
-  map.on('singleclick', function (evt) {
-    popupOverlay.setPosition(undefined); // Close any open popup
+  map.on('singleclick', function () {
+    popupOverlay.setPosition(undefined);
   });
 }
 
-// Add popup to icons function
 function addPopupToIcons(map, vectorSource, popupOverlay, popupContent, toLonLat) {
   map.on('pointermove', function (e) {
     const pixel = map.getEventPixel(e.originalEvent);
@@ -221,19 +211,102 @@ function addPopupToIcons(map, vectorSource, popupOverlay, popupContent, toLonLat
   });
 }
 
-// Main function
+async function updateCoordinate() {
+  const id = document.getElementById('edit-id').value;
+  const name = document.getElementById('edit-name').value;
+  const x = parseFloat(document.getElementById('edit-x').value);
+  const y = parseFloat(document.getElementById('edit-y').value);
+
+  try {
+    const response = await axios.put('https://localhost:7201/api/Coordinate', { id, name, x, y });
+    if (response.status === 200) {
+      document.getElementById('editModal').style.display = 'none';
+      const coordinates = await fetchCoordinates();
+      vectorSource.clear();
+      addIconsToMap(coordinates, vectorSource, iconStyle);
+      dataTableInstance.ajax.reload();
+    }
+  } catch (error) {
+    console.error('Error updating coordinate:', error);
+  }
+}
+
+async function deleteCoordinate(id) {
+  try {
+    const response = await axios.delete(`https://localhost:7201/api/Coordinate/${id}`);
+    if (response.status === 200) {
+      const coordinates = await fetchCoordinates();
+      vectorSource.clear();
+      addIconsToMap(coordinates, vectorSource, iconStyle);
+      dataTableInstance.ajax.reload();
+    }
+  } catch (error) {
+    console.error('Error deleting coordinate:', error);
+  }
+}
+
+
+// Yeni buton ve modal elementlerini seç
+const addBtn = document.getElementById('addBtn');
+const addModal = document.getElementById('addModal');
+const addSpan = document.querySelector('.close-add');
+const addForm = document.getElementById('add-form');
+
+// Butona tıklayınca modalı aç
+addBtn.onclick = function () {
+  addModal.style.display = 'block';
+};
+
+// Kapatma butonuna tıklayınca modalı kapat
+addSpan.onclick = function () {
+  addModal.style.display = 'none';
+};
+
+// Modal dışına tıklayınca modalı kapat
+window.onclick = function (event) {
+  if (event.target == addModal) {
+    addModal.style.display = 'none';
+  }
+};
+
+// Form submit işlemi
+addForm.onsubmit = async function (event) {
+  event.preventDefault();
+  const name = document.getElementById('add-name').value;
+  const x = parseFloat(document.getElementById('add-x').value);
+  const y = parseFloat(document.getElementById('add-y').value);
+
+  try {
+    const response = await axios.post('https://localhost:7201/api/Coordinate', { name, x, y });
+    if (response.status === 200 || response.status === 201) {
+      alert('Coordinate added successfully');
+      addModal.style.display = 'none';
+      const coordinates = await fetchCoordinates();
+      vectorSource.clear();
+      addIconsToMap(coordinates, vectorSource, iconStyle);
+      dataTableInstance.ajax.reload();
+    }
+  } catch (error) {
+    console.error('Error adding coordinate:', error);
+    alert('Error adding coordinate');
+  }
+};
+
+// main fonksiyonunda modal ve form event listener'larını tanımlayın
 async function main() {
   const map = createMap();
   const popupOverlay = createPopupOverlay();
   map.addOverlay(popupOverlay);
 
-  // Modal functionality
   const modal = document.getElementById('myModal');
   const btn = document.getElementById('myBtn');
   const span = document.querySelector('.close');
+  const editModal = document.getElementById('editModal');
+  const editSpan = document.querySelector('.close-edit');
 
   btn.onclick = function () {
     modal.style.display = 'block';
+    dataTableInstance.ajax.reload(); // Modal açıldığında tabloyu yenile
   };
 
   span.onclick = function () {
@@ -243,15 +316,26 @@ async function main() {
   window.onclick = function (event) {
     if (event.target == modal) {
       modal.style.display = 'none';
+    } else if (event.target == editModal) {
+      editModal.style.display = 'none';
     }
   };
 
-  // Load data and add icons to map
+  editSpan.onclick = function () {
+    editModal.style.display = 'none';
+  };
+
   const coordinates = await fetchCoordinates();
-  addIconsToMap(coordinates, vectorSource, iconStyle, dataSet, map, modal);
-  addMapClickListener(map, popupOverlay); // Add map click listener
-  addPopupToIcons(map, vectorSource, popupOverlay, popupContent, toLonLat); // Add popup to icons
+  addIconsToMap(coordinates, vectorSource, iconStyle);
+  initializeDataTable(map, map.getView(), modal);
+  addMapClickListener(map, popupOverlay);
+  addPopupToIcons(map, vectorSource, popupOverlay, popupContent, toLonLat);
+
+  document.getElementById('edit-form').onsubmit = function (event) {
+    event.preventDefault();
+    updateCoordinate();
+  };
 }
 
-// Start main function
+// main fonksiyonunu çalıştırın
 main();

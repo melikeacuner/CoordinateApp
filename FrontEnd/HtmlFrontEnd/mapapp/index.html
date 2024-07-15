@@ -1,50 +1,71 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/x-icon" href="https://openlayers.org/favicon.ico" />
-  <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Using OpenLayers with Vite</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map App</title>
+  <link href="https://cdn.datatables.net/1.10.21/css/jquery.dataTables.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <div style="display: flex;">
-    <div class="navbar">
-      <ul class="navbar-list">
-        <li class="navbar-item">
-          <button class="GeoEkle">Geo Ekle</button>
-        </li>
-        <li class="navbar-item">
-          <a href="" class="no-underline">Geo Sil</a>
-        </li>
-        <li class="navbar-item">
-          <a href="" class="no-underline">Geo Düzenle</a>
-        </li>
-        <li class="navbar-item">
-          <button id="myBtn">Geo Getir (Hepsi)</button>
-          <div id="myModal" class="modal">
-            <div class="close-container">
-              <span class="close">&times;</span>
-            </div>
-            <div class="datatable-container">
-              <table id="example"></table>
-            </div>
-          </div>
-        </li>
-        <li class="navbar-item">
-          <a href="" class="no-underline">Geo Getir(Spesifik)</a>
-        </li>
-      </ul>
-    </div>
-  </div>
   <div id="map" class="map"></div>
   <div id="popup" class="ol-popup">
     <a href="#" id="popup-closer" class="ol-popup-closer"></a>
     <div id="popup-content"></div>
   </div>
-  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <!-- Add Coordinate Button -->
+<button id="addBtn">Add Coordinate</button>
+
+<!-- Add Coordinate Modal -->
+<div id="addModal" class="modal">
+  <div class="modal-content">
+    <span class="close-add">&times;</span>
+    <h2>Add Coordinate</h2>
+    <form id="add-form">
+      <label for="add-name">Name:</label>
+      <input type="text" id="add-name" name="name" required><br>
+      <label for="add-x">Coordinate X:</label>
+      <input type="text" id="add-x" name="x" required><br>
+      <label for="add-y">Coordinate Y:</label>
+      <input type="text" id="add-y" name="y" required><br>
+      <button type="submit">Add</button>
+    </form>
+  </div>
+</div>
+
+  <button id="myBtn">Show Coordinates</button>
+  <div id="myModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <table id="example" class="display" style="width:100%"></table>
+    </div>
+  </div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal">
+  <div class="modal-content">
+    <span class="close-edit">&times;</span>
+    <h2>Edit Coordinate</h2>
+    <form id="edit-form">
+      <label for="edit-name">Name:</label>
+      <input type="text" id="edit-name" name="name" required>
+      <br>
+      <label for="edit-x">Coordinate_X:</label>
+      <input type="text" id="edit-x" name="x" required>
+      <br>
+      <label for="edit-y">Coordinate_Y:</label>
+      <input type="text" id="edit-y" name="y" required>
+      <br>
+      <input type="hidden" id="edit-id" name="id">
+      <br>
+      <button type="submit">Save</button>
+    </form>
+  </div>
+</div>
+
+  <!-- jQuery kütüphanesini ekleyin -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
   <script type="module" src="./main.js"></script>
 </body>
 </html>
