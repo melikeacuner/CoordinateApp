@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace CoordinateApp.Migrations
 {
     [DbContext(typeof(CoordinatesDbContext))]
-    [Migration("20240706185212_v1")]
+    [Migration("20240711202239_v1")]
     partial class v1
     {
         /// <inheritdoc />
@@ -36,11 +36,11 @@ namespace CoordinateApp.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("X")
-                        .HasColumnType("integer");
+                    b.Property<double>("X")
+                        .HasColumnType("double precision");
 
-                    b.Property<int>("Y")
-                        .HasColumnType("integer");
+                    b.Property<double>("Y")
+                        .HasColumnType("double precision");
 
                     b.HasKey("Id");
 

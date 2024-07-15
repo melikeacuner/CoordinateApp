@@ -27,6 +27,16 @@ builder.Services.AddScoped<ICoordinateService, CoordinateService>();
 builder.Services.AddScoped<ICoordinateRepository, CoordinateRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+// CORS policy configuration
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CorsPolicy",
+        builder => builder
+            .AllowAnyOrigin() // Tüm kaynaklardan isteklere izin verir (Geliþtirme amaçlý)
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -40,6 +50,9 @@ app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
+app.UseCors("CorsPolicy");
+
 app.MapControllers();
 
 app.Run();
+

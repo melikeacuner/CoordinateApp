@@ -33,11 +33,11 @@ namespace CoordinateApp.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("X")
-                        .HasColumnType("integer");
+                    b.Property<double>("X")
+                        .HasColumnType("double precision");
 
-                    b.Property<int>("Y")
-                        .HasColumnType("integer");
+                    b.Property<double>("Y")
+                        .HasColumnType("double precision");
 
                     b.HasKey("Id");
 

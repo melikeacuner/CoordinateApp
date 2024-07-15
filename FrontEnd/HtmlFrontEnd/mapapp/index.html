@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/x-icon" href="https://openlayers.org/favicon.ico" />
+  <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Using OpenLayers with Vite</title>
+</head>
+
+<body>
+  <div style="display: flex;">
+    <div class="navbar">
+      <ul class="navbar-list">
+        <li class="navbar-item">
+          <a href="" class="no-underline">Geo Ekle</a>
+        </li>
+        <li class="navbar-item">
+          <a href="" class="no-underline">Geo Sil</a>
+        </li>
+        <li class="navbar-item">
+          <a href="" class="no-underline">Geo Düzenle</a>
+        </li>
+        <li class="navbar-item">
+          <button id="myBtn">Popup Aç</button>
+          <div id="myModal" class="modal">
+            <div class="close-container">
+              <span class="close">&times;</span>
+            </div>
+            <div class="datatable-container">
+              <table id="example"></table>
+            </div>
+          </div>
+        </li>
+        <li class="navbar-item">
+          <a href="" class="no-underline">Geo Getir(Spesifik)</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div id="map" class="map"></div>
+  <div id="popup" class="ol-popup">
+    <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+    <div id="popup-content"></div>
+  </div>
+  <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

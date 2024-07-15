@@ -1,0 +1,129 @@
+@import "node_modules/ol/ol.css";
+
+*{
+  margin: 0;
+  padding: 0;
+}
+.navbar {
+  width: 100%;
+  border: solid rgb(0, 23, 124) 2px;
+  flex-direction: column;
+}
+
+.navbar-list {
+list-style-type: none; 
+padding: 0; 
+margin: 0; 
+display: flex;
+}
+
+.navbar-item {
+border: dotted rgb(0, 23, 124) 1px;
+display: flex;
+align-items: center;
+justify-content: center;
+height: 30px;
+width:100% ;
+background-color: rgb(180, 217, 250);
+}
+
+.no-underline {
+text-decoration: none;
+font-weight: bold;
+height: 100%;
+display: flex;
+align-items: center;
+justify-content: center;
+padding: 0 10px;
+color: rgb(130, 35, 35);
+}
+
+.map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  margin-top: 50px;
+  flex-direction: column;
+}
+
+
+.modal{
+  display: none;
+  position: fixed; 
+  z-index: 1;
+  width: 60%; 
+  height: 70%; 
+  background-color: rgba(0,0,0,0.2); 
+  top: 50%; 
+  left: 50%; 
+  transform: translate(-50%, -50%); 
+  overflow: auto;
+  background-color: #fefefe;
+  padding: 20px;
+  border: 1px solid #888;
+  text-align: center;
+}
+
+.close-container {
+  text-align: right;
+  margin-bottom: 20px;
+}
+
+.close {
+  color: #aaa;
+  font-size: 28px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: black;
+  text-decoration: none;
+}
+
+.ol-popup {
+  position: absolute;
+  background-color: white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid #cccccc;
+  min-width: 280px;
+  z-index: 1000; /* Overlay elementinin diğer elementlerin üzerinde olmasını sağlar */
+}
+
+.ol-popup:after, .ol-popup:before {
+  top: 100%;
+  border: solid transparent;
+  content: " ";
+  height: 0;
+  width: 0;
+  position: absolute;
+  pointer-events: none;
+}
+
+.ol-popup:after {
+  border-top-color: white;
+  border-width: 10px;
+  left: calc(50% - 10px); /* Pop-upın ortalanması */
+  margin-left: -10px;
+}
+
+.ol-popup:before {
+  border-top-color: #cccccc;
+  border-width: 11px;
+  left: calc(50% - 11px); /* Pop-upın ortalanması */
+  margin-left: -11px;
+}
+
+.ol-popup-closer {
+  text-decoration: none;
+  position: absolute;
+  top: 2px;
+  right: 8px;
+}
+
+.ol-popup-closer:after {
+  content: "✖";
+}

@@ -1,0 +1,62 @@
+import './style.css';
+import { Feature, Map, View } from 'ol';
+import TileLayer from 'ol/layer/Tile';
+import OSM from 'ol/source/OSM';
+import VectorLayer from 'ol/layer/Vector';
+import VectorSource from 'ol/source/Vector';
+import { Icon, Style } from 'ol/style';
+import axios from 'axios';
+import Point from 'ol/geom/Point'; 
+
+const iconStyle = new Style({
+  image: new Icon({
+    src: 'location-pin.png',
+    scale: 0.07, 
+  }),
+});
+
+const iconFeature = new Feature();
+
+iconFeature.setStyle(iconStyle);
+
+const vectorSource = new VectorSource({
+  features: [iconFeature],
+});
+
+const map = new Map({
+  target: 'map',
+  layers: [
+    new TileLayer({ source: new OSM() }), 
+    new VectorLayer({ source: vectorSource })],
+  view: new View({
+    center: [3921750.6964797713, 4719959.740180479],
+    zoom: 6.6,
+  }),
+});
+
+async function fetchAndAddFeatures() {
+  try {
+    const response = await axios.get('https://localhost:7201/api/Coordinate');
+    const coordinates = response.data.data;
+
+    // Koordinatları ekleyeceğimiz features array'i
+    const features = coordinates.map(coord => {
+      const point = new Feature({
+        geometry: new Point([coord.x, coord.y]),
+        name: coord.name,
+        id: coord.id,
+      });
+      
+      // Her feature için aynı stil tanımını kullanıyoruz
+      point.setStyle(iconStyle);
+      return point;
+    });
+
+    vectorSource.addFeatures(features);
+
+  } catch (error) {
+    console.error('Özellikler alınırken veya eklenirken hata oluştu:', error);
+  }
+}
+
+fetchAndAddFeatures();
