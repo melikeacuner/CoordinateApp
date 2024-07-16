@@ -89,6 +89,7 @@ function flyTo(location, view, done) {
 function initializeDataTable(map, view, modal) {
   if (!dataTableInstance) {
     dataTableInstance = new DataTable('#example', {
+      pageLength: 5,
       ajax: {
         url: 'https://localhost:7201/api/Coordinate',
         dataSrc: 'data'
@@ -365,4 +366,4 @@ async function main() {
   };
 }
 
-main();
+await main();
