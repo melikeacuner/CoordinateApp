@@ -12,11 +12,14 @@
   <div id="popup" class="ol-popup">
     <a href="#" id="popup-closer" class="ol-popup-closer"></a>
     <div id="popup-content"></div>
+    <div id="pop-up-buttons">
+      <button id="delete-button-popup">Delete</button>
+      <button id="manual-update-popup">Manual Update</button>
+      <button id="drag-update">Drag Update</button>
+    </div>
   </div>
-  <!-- Add Coordinate Button -->
-<button id="addBtn">Add Coordinate</button>
 
-<!-- Add Coordinate Modal -->
+<button id="addBtn">Add Coordinate</button>
 <div id="addModal" class="modal">
   <div class="modal-content">
     <span class="close-add">&times;</span>
@@ -32,7 +35,6 @@
     </form>
   </div>
 </div>
-
   <button id="myBtn">Show Coordinates</button>
   <div id="myModal" class="modal">
     <div class="modal-content">
@@ -40,8 +42,6 @@
       <table id="example" class="display" style="width:100%"></table>
     </div>
   </div>
-
-<!-- Edit Modal -->
 <div id="editModal" class="modal">
   <div class="modal-content">
     <span class="close-edit">&times;</span>
@@ -62,8 +62,6 @@
     </form>
   </div>
 </div>
-
-  <!-- jQuery kütüphanesini ekleyin -->
   <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
   <script src="https://cdn.datatables.net/1.10.21/js/jquery.dataTables.min.js"></script>
   <script type="module" src="./main.js"></script>

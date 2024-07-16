@@ -61,9 +61,10 @@ function createPopupOverlay() {
   return overlay;
 }
 
+// zoom function
 function flyTo(location, view, done) {
   const duration = 1000;
-  const targetZoom = view.getZoom() + 2; // Hedef zoom seviyesi
+  const targetZoom = view.getZoom() + 2;
 
   let parts = 2;
   let called = false;
@@ -79,7 +80,7 @@ function flyTo(location, view, done) {
 
   view.animate(
     { center: location, duration: duration },
-    { zoom: targetZoom, duration: duration }, // Hedef zoom seviyesine git
+    { zoom: targetZoom, duration: duration },
     callback
   );
 }
@@ -96,7 +97,7 @@ function initializeDataTable(map, view, modal) {
         { data: 'name', title: 'Name' },
         { data: 'x', title: 'Coordinate_X' },
         { data: 'y', title: 'Coordinate_Y' },
-        { data: 'id', title: 'ID', visible: false }, // Gizli ID sütunu
+        { data: 'id', title: 'ID', visible: false },
         {
           title: 'Edit',
           render: function (data, type, row) {
@@ -245,19 +246,15 @@ async function deleteCoordinate(id) {
   }
 }
 
-
-// Yeni buton ve modal elementlerini seç
 const addBtn = document.getElementById('addBtn');
 const addModal = document.getElementById('addModal');
 const addSpan = document.querySelector('.close-add');
 const addForm = document.getElementById('add-form');
 
-// Butona tıklayınca modalı aç
 addBtn.onclick = function () {
   addModal.style.display = 'block';
 };
 
-// Kapatma butonuna tıklayınca modalı kapat
 addSpan.onclick = function () {
   addModal.style.display = 'none';
 };
@@ -269,7 +266,6 @@ window.onclick = function (event) {
   }
 };
 
-// Form submit işlemi
 addForm.onsubmit = async function (event) {
   event.preventDefault();
   const name = document.getElementById('add-name').value;
@@ -292,7 +288,6 @@ addForm.onsubmit = async function (event) {
   }
 };
 
-// main fonksiyonunda modal ve form event listener'larını tanımlayın
 async function main() {
   const map = createMap();
   const popupOverlay = createPopupOverlay();
@@ -306,7 +301,7 @@ async function main() {
 
   btn.onclick = function () {
     modal.style.display = 'block';
-    dataTableInstance.ajax.reload(); // Modal açıldığında tabloyu yenile
+    dataTableInstance.ajax.reload(); 
   };
 
   span.onclick = function () {
@@ -337,5 +332,4 @@ async function main() {
   };
 }
 
-// main fonksiyonunu çalıştırın
 main();
