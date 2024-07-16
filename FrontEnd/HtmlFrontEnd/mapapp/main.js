@@ -9,7 +9,9 @@ import axios from 'axios';
 import Point from 'ol/geom/Point';
 import DataTable from 'datatables.net-dt';
 import Overlay from 'ol/Overlay.js';
-import { toLonLat } from 'ol/proj.js';
+import { useGeographic } from 'ol/proj.js';
+
+useGeographic();
 
 const iconStyle = new Style({
   image: new Icon({
@@ -36,7 +38,7 @@ function createMap() {
       vectorLayer,
     ],
     view: new View({
-      center: [3921750.6964797713, 4719959.740180479],
+      center: [34.0, 39.0],
       zoom: 6.6,
     }),
   });
@@ -61,7 +63,6 @@ function createPopupOverlay() {
   return overlay;
 }
 
-// zoom function
 function flyTo(location, view, done) {
   const duration = 1000;
   const targetZoom = view.getZoom() + 2;
@@ -84,7 +85,6 @@ function flyTo(location, view, done) {
     callback
   );
 }
-
 
 function initializeDataTable(map, view, modal) {
   if (!dataTableInstance) {
@@ -135,8 +135,8 @@ function initializeDataTable(map, view, modal) {
         const rowData = dataTableInstance.row($(event.target).parents('tr')).data();
 
         document.getElementById('edit-name').value = rowData.name;
-        document.getElementById('edit-x').value = rowData.x;
-        document.getElementById('edit-y').value = rowData.y;
+        document.getElementById('edit-lon').value = rowData.x;
+        document.getElementById('edit-lat').value = rowData.y;
         document.getElementById('edit-id').value = rowData.id;
 
         document.getElementById('editModal').style.display = 'block';
@@ -186,40 +186,72 @@ function addMapClickListener(map, popupOverlay) {
   });
 }
 
-function addPopupToIcons(map, vectorSource, popupOverlay, popupContent, toLonLat) {
-  map.on('pointermove', function (e) {
+function addPopupToIcons(map, vectorSource, popupOverlay, popupContent) {
+  map.on('pointermove', (e) => {
     const pixel = map.getEventPixel(e.originalEvent);
     const hit = map.hasFeatureAtPixel(pixel);
     map.getTargetElement().style.cursor = hit ? 'pointer' : '';
   });
 
-  map.on('singleclick', function (evt) {
-    const feature = map.forEachFeatureAtPixel(evt.pixel, function (feature) {
-      return feature;
-    });
+  map.on('singleclick', (evt) => {
+    const feature = map.forEachFeatureAtPixel(evt.pixel, (feature) => feature);
 
     if (feature) {
       const coordinate = feature.getGeometry().getCoordinates();
-      const lonLat = toLonLat(coordinate);
+      const lon = coordinate[0];
+      const lat = coordinate[1];
+      const featureId = feature.get('id');
 
       popupContent.innerHTML =
-        '<p>Longitude: ' + lonLat[0] + '</p>' +
-        '<p>Latitude: ' + lonLat[1] + '</p>' +
-        '<p>Name: ' + feature.get('name') + '</p>';
+        `<p>Longitude: ${lon}</p>` +
+        `<p>Latitude: ${lat}</p>` +
+        `<p>Name: ${feature.get('name')}</p>` +
+        `<button class="delete-button-popup" data-id="${featureId}">Delete</button>` +
+        `<button class="manual-update-popup" data-id="${featureId}">Manual Update</button>` +
+        `<button class="drag-update-popup" data-id="${featureId}">Drag Update</button>`;
 
       popupOverlay.setPosition(coordinate);
+
+      popupContent.querySelector('.delete-button-popup').addEventListener('click', function () {
+        const id = this.getAttribute('data-id');
+        if (confirm('Are you sure you want to delete this coordinate?')) {
+          deleteCoordinate(id);
+        }
+      });
+
+      popupContent.querySelector('.manual-update-popup').addEventListener('click', function () {
+        showEditModal(feature);
+      });
+
+      popupContent.querySelector('.drag-update-popup').addEventListener('click', function () {
+        const id = this.getAttribute('data-id');
+      });
     }
   });
+}
+
+function showEditModal(feature) {
+  const editModal = document.getElementById('editModal');
+  if (editModal) {
+    document.getElementById('edit-id').value = feature.get('id');
+    document.getElementById('edit-name').value = feature.get('name');
+    const coordinate = feature.getGeometry().getCoordinates();
+    document.getElementById('edit-lon').value = coordinate[0];
+    document.getElementById('edit-lat').value = coordinate[1];
+    editModal.style.display = 'block';
+  } else {
+    console.error('Edit modal not found.');
+  }
 }
 
 async function updateCoordinate() {
   const id = document.getElementById('edit-id').value;
   const name = document.getElementById('edit-name').value;
-  const x = parseFloat(document.getElementById('edit-x').value);
-  const y = parseFloat(document.getElementById('edit-y').value);
+  const x = parseFloat(document.getElementById('edit-lon').value);
+  const y = parseFloat(document.getElementById('edit-lat').value);
 
   try {
-    const response = await axios.put('https://localhost:7201/api/Coordinate', { id, name, x, y });
+    const response = await axios.put(`https://localhost:7201/api/Coordinate`, { id, name, x, y });
     if (response.status === 200) {
       document.getElementById('editModal').style.display = 'none';
       const coordinates = await fetchCoordinates();
@@ -232,10 +264,12 @@ async function updateCoordinate() {
   }
 }
 
+
 async function deleteCoordinate(id) {
   try {
     const response = await axios.delete(`https://localhost:7201/api/Coordinate/${id}`);
     if (response.status === 200) {
+      alert('Coordinate deleted successfully!');
       const coordinates = await fetchCoordinates();
       vectorSource.clear();
       addIconsToMap(coordinates, vectorSource, iconStyle);
@@ -259,7 +293,6 @@ addSpan.onclick = function () {
   addModal.style.display = 'none';
 };
 
-// Modal dışına tıklayınca modalı kapat
 window.onclick = function (event) {
   if (event.target == addModal) {
     addModal.style.display = 'none';
@@ -324,7 +357,7 @@ async function main() {
   addIconsToMap(coordinates, vectorSource, iconStyle);
   initializeDataTable(map, map.getView(), modal);
   addMapClickListener(map, popupOverlay);
-  addPopupToIcons(map, vectorSource, popupOverlay, popupContent, toLonLat);
+  addPopupToIcons(map, vectorSource, popupOverlay, popupContent);
 
   document.getElementById('edit-form').onsubmit = function (event) {
     event.preventDefault();
