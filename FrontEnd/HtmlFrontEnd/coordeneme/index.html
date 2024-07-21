@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenLayers Drawing and Saving</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ol/6.5.0/ol.css">
+  <!-- <link rel="stylesheet" href="./style.css"> -->
+  <style>
+    #map {
+      width: 100%;
+      height: 600px;
+    }
+    .controls {
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="map" class="map"></div>
+  <select id="type">
+    <option value="Point">Point</option>
+    <option value="LineString">LineString</option>
+    <option value="Polygon">Polygon</option>
+    <option value="Circle">Circle</option>
+  </select>
+  <button id="add-coordinate">Add Coordinate</button>
+  <button id="save-coordinate">Save Coordinate</button>
+  
+  <!-- Modal for name input -->
+  <div id="nameModal" class="modal">
+    <div class="modal-content">
+      <span class="close">&times;</span>
+      <p>Enter a name for the coordinate:</p>
+      <input type="text" id="coordinate-name" placeholder="Coordinate Name">
+      <button id="submit-name">Submit</button>
+    </div>
+  </div>
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

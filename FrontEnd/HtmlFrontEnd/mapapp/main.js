@@ -1,17 +1,17 @@
 import './style.css';
-import { Feature, Map, View } from 'ol';
+import { Map, View } from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import OSM from 'ol/source/OSM';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import { Icon, Style } from 'ol/style';
-import axios from 'axios';
-import Point from 'ol/geom/Point';
-import DataTable from 'datatables.net-dt';
+import { Icon, Style, Circle as CircleStyle, Fill, Stroke } from 'ol/style';
+import { Draw, Snap } from 'ol/interaction';
+import { WKT } from 'ol/format';
 import Overlay from 'ol/Overlay.js';
-import { useGeographic } from 'ol/proj.js';
+import { transform } from 'ol/proj';
+import DataTable from 'datatables.net-dt';
 
-useGeographic();
+const API_URL = 'https://localhost:7201/api/Coordinate';
 
 const iconStyle = new Style({
   image: new Icon({
@@ -20,25 +20,58 @@ const iconStyle = new Style({
   }),
 });
 
-const vectorSource = new VectorSource();
-const vectorLayer = new VectorLayer({
-  source: vectorSource,
+const source = new VectorSource();
+const vector = new VectorLayer({
+  source: source,
+  style: function (feature) {
+    const geometryType = feature.getGeometry().getType();
+    switch (geometryType) {
+      case 'Point':
+        return iconStyle;
+      case 'LineString':
+      case 'Polygon':
+      case 'Circle':
+        return new Style({
+          stroke: new Stroke({
+            color: '#ffcc33',
+            width: 2,
+          }),
+          fill: new Fill({
+            color: 'rgba(255, 255, 255, 0.2)',
+          }),
+        });
+      default:
+        return new Style({
+          stroke: new Stroke({
+            color: '#ffcc33',
+            width: 2,
+          }),
+          fill: new Fill({
+            color: 'rgba(255, 255, 255, 0.2)',
+          }),
+        });
+    }
+  },
 });
 
-const popupContainer = document.getElementById('popup');
-const popupContent = document.getElementById('popup-content');
-const popupCloser = document.getElementById('popup-closer');
+const popupElements = {
+  container: document.getElementById('popup'),
+  content: document.getElementById('popup-content'),
+  closer: document.getElementById('popup-closer'),
+};
+
 let dataTableInstance = null;
+let draw, snap;
 
 function createMap() {
   return new Map({
     target: 'map',
     layers: [
       new TileLayer({ source: new OSM() }),
-      vectorLayer,
+      vector,
     ],
     view: new View({
-      center: [34.0, 39.0],
+      center: transform([34.0, 39.0], 'EPSG:4326', 'EPSG:3857'),
       zoom: 6.6,
     }),
   });
@@ -46,324 +79,309 @@ function createMap() {
 
 function createPopupOverlay() {
   const overlay = new Overlay({
-    element: popupContainer,
-    autoPan: {
-      animation: {
-        duration: 250,
-      },
-    },
+    element: popupElements.container,
+    autoPan: { animation: { duration: 250 } },
   });
 
-  popupCloser.onclick = function () {
+  popupElements.closer.onclick = () => {
     overlay.setPosition(undefined);
-    popupCloser.blur();
+    popupElements.closer.blur();
     return false;
   };
 
   return overlay;
 }
 
-function flyTo(location, view, done) {
-  const duration = 1000;
-  const targetZoom = view.getZoom() + 2;
+function addInteractions(map, type) {
+  draw = new Draw({
+    source: source,
+    type: type,
+  });
+  map.addInteraction(draw);
+  snap = new Snap({ source: source });
+  map.addInteraction(snap);
 
-  let parts = 2;
-  let called = false;
-
-  function callback(complete) {
-    --parts;
-    if (called) return;
-    if (parts === 0 || !complete) {
-      called = true;
-      done(complete);
-    }
-  }
-
-  view.animate(
-    { center: location, duration: duration },
-    { zoom: targetZoom, duration: duration },
-    callback
-  );
+  draw.on('drawend', function () {
+    map.removeInteraction(draw);
+    map.removeInteraction(snap);
+    document.getElementById('nameModal').style.display = 'block';
+  });
 }
 
-function initializeDataTable(map, view, modal) {
-  if (!dataTableInstance) {
-    dataTableInstance = new DataTable('#example', {
-      pageLength: 5,
-      ajax: {
-        url: 'https://localhost:7201/api/Coordinate',
-        dataSrc: 'data'
-      },
-      columns: [
-        { data: 'name', title: 'Name' },
-        { data: 'x', title: 'Coordinate_X' },
-        { data: 'y', title: 'Coordinate_Y' },
-        { data: 'id', title: 'ID', visible: false },
-        {
-          title: 'Edit',
-          render: function (data, type, row) {
-            return `<button class="edit-btn" data-id="${row.id}">Edit</button>`;
-          },
-        },
-        {
-          title: 'Delete',
-          render: function (data, type, row) {
-            return `<button class="delete-btn" data-id="${row.id}">Delete</button>`;
-          },
-        },
-        {
-          title: 'Zoom',
-          render: function (data, type, row, meta) {
-            return '<button class="zoom-btn" data-index="' + meta.row + '">Zoom</button>';
-          },
-        },
-      ]
-    });
-
-    document.querySelector('#example').addEventListener('click', function (event) {
-      if (event.target.classList.contains('zoom-btn')) {
-        const index = event.target.getAttribute('data-index');
-        const coordX = parseFloat(dataTableInstance.row(index).data().x);
-        const coordY = parseFloat(dataTableInstance.row(index).data().y);
-        const location = [coordX, coordY];
-
-        modal.style.display = 'none';
-        flyTo(location, view, function () {});
-      }
-
-      if (event.target.classList.contains('edit-btn')) {
-        const id = event.target.getAttribute('data-id');
-        const rowData = dataTableInstance.row($(event.target).parents('tr')).data();
-
-        document.getElementById('edit-name').value = rowData.name;
-        document.getElementById('edit-lon').value = rowData.x;
-        document.getElementById('edit-lat').value = rowData.y;
-        document.getElementById('edit-id').value = rowData.id;
-
-        document.getElementById('editModal').style.display = 'block';
-      }
-
-      if (event.target.classList.contains('delete-btn')) {
-        const id = event.target.getAttribute('data-id');
-        const rowData = dataTableInstance.row($(event.target).parents('tr')).data();
-
-        if (confirm(`Are you sure you want to delete the coordinate: ${rowData.name}?`)) {
-          deleteCoordinate(id);
-        }
-      }
-    });
-  } else {
+function initializeDataTable(map, view) {
+  if (dataTableInstance) {
     dataTableInstance.ajax.reload();
+    return;
+  }
+
+  dataTableInstance = new DataTable('#example', {
+    pageLength: 5,
+    ajax: { 
+      url: API_URL,
+      dataSrc: 'data',
+      dataFilter: function(data){
+        var json = JSON.parse(data);
+        json.data = json.data.map(item => ({
+          ...item,
+          wkt: new WKT().writeGeometry(new WKT().readGeometry(item.wkt))
+        }));
+        return JSON.stringify(json);
+      }
+    },
+    columns: [
+      { data: 'name', title: 'Name' },
+      { data: 'wkt', title: 'WKT' },
+      { data: 'id', title: 'ID', visible: false },
+      {
+        title: 'Edit',
+        render: (data, type, row) => `<button class="edit-btn" data-id="${row.id}">Edit</button>`,
+      },
+      {
+        title: 'Delete',
+        render: (data, type, row) => `<button class="delete-btn" data-id="${row.id}">Delete</button>`,
+      },
+      {
+        title: 'Zoom',
+        render: (data, type, row, meta) => `<button class="zoom-btn" data-index="${meta.row}">Zoom</button>`,
+      },
+    ],
+    drawCallback: function() {
+      $('.edit-btn').on('click', function() { handleEditButton(this); });
+      $('.delete-btn').on('click', function() { handleDeleteButton(this); });
+      $('.zoom-btn').on('click', function() { handleZoomButton(this); });
+    }
+  });
+
+  function handleZoomButton(button) {
+    const index = button.getAttribute('data-index');
+    const wkt = dataTableInstance.row(index).data().wkt;
+    const format = new WKT();
+    const feature = format.readFeature(wkt, {
+      dataProjection: 'EPSG:4326',
+      featureProjection: 'EPSG:3857'
+    });
+    const geometry = feature.getGeometry();
+    const extent = geometry.getExtent();
+    view.fit(extent, { padding: [100, 100, 100, 100], maxZoom: 18 });
+  }
+
+  function handleEditButton(button) {
+    const id = button.getAttribute('data-id');
+    const rowData = dataTableInstance.row($(button).closest('tr')).data();
+    
+    document.getElementById('edit-name').value = rowData.name;
+    document.getElementById('edit-wkt').value = rowData.wkt;
+    document.getElementById('edit-id').value = rowData.id;
+    document.getElementById('editModal').style.display = 'block';
+  }
+
+  function handleDeleteButton(button) {
+    const id = button.getAttribute('data-id');
+    const rowData = dataTableInstance.row($(button).closest('tr')).data();
+    if (confirm(`Are you sure you want to delete the coordinate: ${rowData.name}?`)) {
+      deleteCoordinate(id);
+    }
   }
 }
 
 async function fetchCoordinates() {
   try {
-    const response = await axios.get('https://localhost:7201/api/Coordinate');
-    return response.data.data;
+    const response = await fetch(API_URL);
+    const data = await response.json();
+    return data.data;
   } catch (error) {
-    console.error('Error fetching features:', error);
+    console.error('Error fetching coordinates:', error);
     return [];
   }
 }
 
-function addIconsToMap(coordinates, vectorSource, iconStyle) {
+// Point türündeki koordinatları filtreleme fonksiyonu
+function filterPoints(coordinates) {
+  const format = new WKT();
+  const pointCoordinates = [];
+
   coordinates.forEach(coord => {
-    const point = new Feature({
-      geometry: new Point([coord.x, coord.y]),
-      name: coord.name,
-      id: coord.id,
-    });
+    if (coord.wkt) {
+      try {
+        const feature = format.readFeature(coord.wkt, {
+          dataProjection: 'EPSG:4326', // Gelen verinin projeksiyonu
+          featureProjection: 'EPSG:3857' // Harita projeksiyonu
+        });
 
-    point.setStyle(iconStyle);
-    point.setProperties({ 'id': coord.id, 'name': coord.name });
-    vectorSource.addFeature(point);
+        if (feature.getGeometry().getType() === 'Point') {
+          pointCoordinates.push(coord);
+        }
+      } catch (error) {
+        console.error('Error parsing WKT:', error, 'for coordinate:', coord);
+      }
+    } else {
+      console.warn('Invalid or empty WKT value for coordinate:', coord);
+    }
+  });
+
+  return pointCoordinates;
+}
+
+// Haritaya ikon ekleme fonksiyonu
+function addIconsToMap(coordinates) {
+  const format = new WKT();
+
+  coordinates.forEach(coord => {
+    if (coord.wkt) {
+      try {
+        const feature = format.readFeature(coord.wkt, {
+          dataProjection: 'EPSG:4326',
+          featureProjection: 'EPSG:3857'
+        });
+
+        feature.setProperties({ id: coord.id, name: coord.name });
+        source.addFeature(feature);
+      } catch (error) {
+        console.error('Error parsing WKT:', error, 'for coordinate:', coord);
+      }
+    } else {
+      console.warn('Invalid or empty WKT value for coordinate:', coord);
+    }
   });
 }
 
-function addMapClickListener(map, popupOverlay) {
-  map.on('singleclick', function () {
-    popupOverlay.setPosition(undefined);
-  });
-}
-
-function addPopupToIcons(map, vectorSource, popupOverlay, popupContent) {
+function addPopupToIcons(map, popupOverlay) {
   map.on('pointermove', (e) => {
     const pixel = map.getEventPixel(e.originalEvent);
-    const hit = map.hasFeatureAtPixel(pixel);
-    map.getTargetElement().style.cursor = hit ? 'pointer' : '';
+    map.getTargetElement().style.cursor = map.hasFeatureAtPixel(pixel) ? 'pointer' : '';
   });
 
   map.on('singleclick', (evt) => {
-    const feature = map.forEachFeatureAtPixel(evt.pixel, (feature) => feature);
-
+    const feature = map.forEachFeatureAtPixel(evt.pixel, feature => feature);
     if (feature) {
-      const coordinate = feature.getGeometry().getCoordinates();
-      const lon = coordinate[0];
-      const lat = coordinate[1];
-      const featureId = feature.get('id');
-
-      popupContent.innerHTML =
-        `<p>Longitude: ${lon}</p>` +
-        `<p>Latitude: ${lat}</p>` +
-        `<p>Name: ${feature.get('name')}</p>` +
-        `<button class="delete-button-popup" data-id="${featureId}">Delete</button>` +
-        `<button class="manual-update-popup" data-id="${featureId}">Manual Update</button>` +
-        `<button class="drag-update-popup" data-id="${featureId}">Drag Update</button>`;
-
-      popupOverlay.setPosition(coordinate);
-
-      popupContent.querySelector('.delete-button-popup').addEventListener('click', function () {
-        const id = this.getAttribute('data-id');
-        if (confirm('Are you sure you want to delete this coordinate?')) {
-          deleteCoordinate(id);
-        }
-      });
-
-      popupContent.querySelector('.manual-update-popup').addEventListener('click', function () {
-        showEditModal(feature);
-      });
-
-      popupContent.querySelector('.drag-update-popup').addEventListener('click', function () {
-        const id = this.getAttribute('data-id');
-      });
+      const geometry = feature.getGeometry();
+      const coord = transform(geometry.getCoordinates(), 'EPSG:3857', 'EPSG:4326');
+      popupElements.content.innerHTML = `
+        <p>Name: ${feature.get('name')}</p>
+        <p>ID: ${feature.get('id')}</p>
+        <p>Longitude: ${coord[0].toFixed(6)}</p>
+        <p>Latitude: ${coord[1].toFixed(6)}</p>
+      `;
+      popupOverlay.setPosition(geometry.getCoordinates());
     }
   });
 }
 
-function showEditModal(feature) {
-  const editModal = document.getElementById('editModal');
-  if (editModal) {
-    document.getElementById('edit-id').value = feature.get('id');
-    document.getElementById('edit-name').value = feature.get('name');
-    const coordinate = feature.getGeometry().getCoordinates();
-    document.getElementById('edit-lon').value = coordinate[0];
-    document.getElementById('edit-lat').value = coordinate[1];
-    editModal.style.display = 'block';
-  } else {
-    console.error('Edit modal not found.');
-  }
-}
-
-async function updateCoordinate() {
-  const id = document.getElementById('edit-id').value;
-  const name = document.getElementById('edit-name').value;
-  const x = parseFloat(document.getElementById('edit-lon').value);
-  const y = parseFloat(document.getElementById('edit-lat').value);
-
+async function addCoordinate(name, geometry) {
+  const wkt = new WKT().writeGeometry(geometry.transform('EPSG:3857', 'EPSG:4326'));
   try {
-    const response = await axios.put(`https://localhost:7201/api/Coordinate`, { id, name, x, y });
-    if (response.status === 200) {
-      document.getElementById('editModal').style.display = 'none';
-      const coordinates = await fetchCoordinates();
-      vectorSource.clear();
-      addIconsToMap(coordinates, vectorSource, iconStyle);
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name, wkt }),
+    });
+    const result = await response.json();
+    if (result.isSucces) {
       dataTableInstance.ajax.reload();
-    }
-  } catch (error) {
-    console.error('Error updating coordinate:', error);
-  }
-}
-
-
-async function deleteCoordinate(id) {
-  try {
-    const response = await axios.delete(`https://localhost:7201/api/Coordinate/${id}`);
-    if (response.status === 200) {
-      alert('Coordinate deleted successfully!');
-      const coordinates = await fetchCoordinates();
-      vectorSource.clear();
-      addIconsToMap(coordinates, vectorSource, iconStyle);
-      dataTableInstance.ajax.reload();
-    }
-  } catch (error) {
-    console.error('Error deleting coordinate:', error);
-  }
-}
-
-const addBtn = document.getElementById('addBtn');
-const addModal = document.getElementById('addModal');
-const addSpan = document.querySelector('.close-add');
-const addForm = document.getElementById('add-form');
-
-addBtn.onclick = function () {
-  addModal.style.display = 'block';
-};
-
-addSpan.onclick = function () {
-  addModal.style.display = 'none';
-};
-
-window.onclick = function (event) {
-  if (event.target == addModal) {
-    addModal.style.display = 'none';
-  }
-};
-
-addForm.onsubmit = async function (event) {
-  event.preventDefault();
-  const name = document.getElementById('add-name').value;
-  const x = parseFloat(document.getElementById('add-x').value);
-  const y = parseFloat(document.getElementById('add-y').value);
-
-  try {
-    const response = await axios.post('https://localhost:7201/api/Coordinate', { name, x, y });
-    if (response.status === 200 || response.status === 201) {
-      alert('Coordinate added successfully');
-      addModal.style.display = 'none';
-      const coordinates = await fetchCoordinates();
-      vectorSource.clear();
-      addIconsToMap(coordinates, vectorSource, iconStyle);
-      dataTableInstance.ajax.reload();
+      addIconsToMap([{ name, wkt }]);
+    } else {
+      alert('Failed to add coordinate: ' + result.message);
     }
   } catch (error) {
     console.error('Error adding coordinate:', error);
     alert('Error adding coordinate');
   }
-};
+}
+
+async function updateCoordinate(id, name, wkt) {
+  try {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ id, name, wkt }),
+    });
+    const result = await response.json();
+    if (result.isSucces) {
+      dataTableInstance.ajax.reload();
+      source.clear();
+      const coordinates = await fetchCoordinates();
+      addIconsToMap(coordinates);
+    } else {
+      alert('Failed to update coordinate: ' + result.message);
+    }
+  } catch (error) {
+    console.error('Error updating coordinate:', error);
+    alert('Error updating coordinate');
+  }
+}
+
+async function deleteCoordinate(id) {
+  try {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: 'DELETE',
+    });
+    const result = await response.json();
+    if (result.isSucces) {
+      dataTableInstance.ajax.reload();
+      source.clear();
+      const coordinates = await fetchCoordinates();
+      addIconsToMap(coordinates);
+    } else {
+      alert('Failed to delete coordinate: ' + result.message);
+    }
+  } catch (error) {
+    console.error('Error deleting coordinate:', error);
+    alert('Error deleting coordinate');
+  }
+}
 
 async function main() {
   const map = createMap();
   const popupOverlay = createPopupOverlay();
   map.addOverlay(popupOverlay);
 
-  const modal = document.getElementById('myModal');
-  const btn = document.getElementById('myBtn');
-  const span = document.querySelector('.close');
-  const editModal = document.getElementById('editModal');
-  const editSpan = document.querySelector('.close-edit');
-
-  btn.onclick = function () {
-    modal.style.display = 'block';
-    dataTableInstance.ajax.reload(); 
-  };
-
-  span.onclick = function () {
-    modal.style.display = 'none';
-  };
-
-  window.onclick = function (event) {
-    if (event.target == modal) {
-      modal.style.display = 'none';
-    } else if (event.target == editModal) {
-      editModal.style.display = 'none';
-    }
-  };
-
-  editSpan.onclick = function () {
-    editModal.style.display = 'none';
-  };
-
   const coordinates = await fetchCoordinates();
-  addIconsToMap(coordinates, vectorSource, iconStyle);
-  initializeDataTable(map, map.getView(), modal);
-  addMapClickListener(map, popupOverlay);
-  addPopupToIcons(map, vectorSource, popupOverlay, popupContent);
+  const pointCoordinates = filterPoints(coordinates);
+  addIconsToMap(pointCoordinates);
+  addPopupToIcons(map, popupOverlay);
 
-  document.getElementById('edit-form').onsubmit = function (event) {
-    event.preventDefault();
-    updateCoordinate();
-  };
+  initializeDataTable(map, map.getView());
+
+  document.getElementById('adddragbtn').addEventListener('click', function() {
+    addInteractions(map, 'Point');
+  });
+
+  document.getElementById('addBtn').addEventListener('click', function() {
+    document.getElementById('addModal').style.display = 'block';
+  });
+
+  document.getElementById('myBtn').addEventListener('click', function() {
+    document.getElementById('myModal').style.display = 'block';
+  });
+
+  // Modal kapatma işlemleri
+  document.querySelectorAll('.close, .close-add, .close-edit').forEach(el => {
+    el.addEventListener('click', function() {
+      this.closest('.modal').style.display = 'none';
+    });
+  });
+
+  // Form submit işlemleri
+  document.getElementById('add-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const name = document.getElementById('coordinate-name').value;
+    const wkt = new WKT().writeGeometry(source.getFeatures()[0].getGeometry());
+    addCoordinate(name, wkt);
+    this.closest('.modal').style.display = 'none';
+  });
+
+  document.getElementById('edit-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const id = document.getElementById('edit-id').value;
+    const name = document.getElementById('edit-name').value;
+    const wkt = document.getElementById('edit-wkt').value;
+    updateCoordinate(id, name, wkt);
+    this.closest('.modal').style.display = 'none';
+  });
 }
 
-await main();
+document.addEventListener('DOMContentLoaded', main);

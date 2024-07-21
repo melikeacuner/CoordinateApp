@@ -17,9 +17,9 @@ namespace CoordinateApp.Services.Concrete
             _mapper = mapper;
         }
 
-        public Response Add(CoordinateAddDto coordinateAddDto)
+        public Response Add(CoordinatesAddDto coordinatesAddDto)
         {
-            var coordinate = _mapper.Map<Coordinate>(coordinateAddDto);
+            var coordinate = _mapper.Map<Coordinates>(coordinatesAddDto);
             var result = new Response();
             try
             {
@@ -31,7 +31,8 @@ namespace CoordinateApp.Services.Concrete
                         return result;
                     }
 
-                    if (!(_unitOfWork.Commit() > 0))
+                    var saveResult = _unitOfWork.Commit();
+                    if (!(saveResult > 0))
                     {
                         result.Message = "There is no change on db";
                         result.IsSucces = false;
@@ -39,18 +40,22 @@ namespace CoordinateApp.Services.Concrete
                     }
 
                     result.IsSucces = true;
-                    result.Data = coordinateAddDto;
+                    result.Data = coordinatesAddDto;
                     result.Message = "Added new coordinate";
                 }
             }
             catch (Exception ex)
             {
                 result.IsSucces = false;
-                result.Message = "Exception occurred: " + ex.Message;
+                result.Message = $"Exception occurred: {ex.Message}";
+                if (ex.InnerException != null)
+                {
+                    result.Message += $" Inner exception: {ex.InnerException.Message}";
+                }
+                // Consider logging the full exception details here
             }
             return result;
         }
-
         public Response Delete(Guid id)
         {
             var result = new Response();
@@ -93,12 +98,15 @@ namespace CoordinateApp.Services.Concrete
                     var coordinateFromDb = _unitOfWork.CoordinateRepository.GetById(id);
                     if (coordinateFromDb == null)
                     {
-                        result.Message = "Not Found !";
+                        result.Message = "Not Found!";
                         return result;
                     }
+
+                    // AutoMapper kullanarak dönüşüm
+                    var coordinateDto = _mapper.Map<CoordinatesDto>(coordinateFromDb);
                     result.IsSucces = true;
                     result.Message = "OK";
-                    result.Data = coordinateFromDb;
+                    result.Data = coordinateDto;
                 }
             }
             catch (Exception ex)
@@ -118,7 +126,8 @@ namespace CoordinateApp.Services.Concrete
                 using (_unitOfWork)
                 {
                     var coordinates = _unitOfWork.CoordinateRepository.GetAll();
-                    result.Data = coordinates;
+                    var coordinatesDto = _mapper.Map<IEnumerable<CoordinatesDto>>(coordinates);
+                    result.Data = coordinatesDto;
                     result.IsSucces = true;
                     result.Message = "OK";
                 }
@@ -131,14 +140,14 @@ namespace CoordinateApp.Services.Concrete
             return result;
         }
 
-        public Response Update(CoordinateUpdateDto korFromReq)
+        public Response Update(CoordinatesDto korFromReq)
         {
             var result = new Response();
             try
             {
                 using (_unitOfWork)
                 {
-                    var coordinate = _mapper.Map<Coordinate>(korFromReq);
+                    var coordinate = _mapper.Map<Coordinates>(korFromReq);
                     if (!_unitOfWork.CoordinateRepository.Update(coordinate))
                     {
                         result.IsSucces = false;

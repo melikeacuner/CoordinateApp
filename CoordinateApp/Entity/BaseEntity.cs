@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace CoordinateApp.Entity
+namespace CoordinateApp.DataAccess
 {
     public class BaseEntity
     {

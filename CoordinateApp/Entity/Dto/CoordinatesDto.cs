@@ -1,10 +1,9 @@
 ﻿namespace CoordinateApp.Entity.Dto
 {
-    public class CoordinateUpdateDto
+    public class CoordinatesDto
     {
         public Guid Id { get; set; }
-        public double X { get; set; }
-        public double Y { get; set; }
+        public string Wkt { get; set; }
         public string Name { get; set; }
     }
 }
