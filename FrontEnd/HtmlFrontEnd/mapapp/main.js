@@ -4,10 +4,10 @@ import TileLayer from 'ol/layer/Tile';
 import OSM from 'ol/source/OSM';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
-import { Icon, Style, Circle as CircleStyle, Fill, Stroke } from 'ol/style';
-import { Draw, Snap } from 'ol/interaction';
+import { Icon, Style, Fill, Stroke } from 'ol/style';
+import { Draw, Modify } from 'ol/interaction';
 import { WKT } from 'ol/format';
-import Overlay from 'ol/Overlay.js';
+import Overlay from 'ol/Overlay';
 import { transform } from 'ol/proj';
 import DataTable from 'datatables.net-dt';
 
@@ -25,43 +25,23 @@ const vector = new VectorLayer({
   source: source,
   style: function (feature) {
     const geometryType = feature.getGeometry().getType();
-    switch (geometryType) {
-      case 'Point':
-        return iconStyle;
-      case 'LineString':
-      case 'Polygon':
-      case 'Circle':
-        return new Style({
-          stroke: new Stroke({
-            color: '#ffcc33',
-            width: 2,
-          }),
-          fill: new Fill({
-            color: 'rgba(255, 255, 255, 0.2)',
-          }),
-        });
-      default:
-        return new Style({
-          stroke: new Stroke({
-            color: '#ffcc33',
-            width: 2,
-          }),
-          fill: new Fill({
-            color: 'rgba(255, 255, 255, 0.2)',
-          }),
-        });
+    if (geometryType === 'Point') {
+      return iconStyle;
     }
+    return new Style({
+      stroke: new Stroke({
+        color: '#003399',
+        width: 2,
+      }),
+      fill: new Fill({
+        color: 'rgba(10, 150, 200, 0.3)',
+      }),
+    });
   },
 });
 
-const popupElements = {
-  container: document.getElementById('popup'),
-  content: document.getElementById('popup-content'),
-  closer: document.getElementById('popup-closer'),
-};
-
 let dataTableInstance = null;
-let draw, snap;
+let draw;
 
 function createMap() {
   return new Map({
@@ -77,15 +57,25 @@ function createMap() {
   });
 }
 
-function createPopupOverlay() {
+function createPopup() {
+  const container = document.createElement('div');
+  container.className = 'ol-popup';
+  const content = document.createElement('div');
+  content.id = 'popup-content';
+  const closer = document.createElement('a');
+  closer.className = 'ol-popup-closer';
+  container.appendChild(closer);
+  container.appendChild(content);
+  document.body.appendChild(container);
+
   const overlay = new Overlay({
-    element: popupElements.container,
+    element: container,
     autoPan: { animation: { duration: 250 } },
   });
 
-  popupElements.closer.onclick = () => {
+  closer.onclick = () => {
     overlay.setPosition(undefined);
-    popupElements.closer.blur();
+    closer.blur();
     return false;
   };
 
@@ -98,290 +88,215 @@ function addInteractions(map, type) {
     type: type,
   });
   map.addInteraction(draw);
-  snap = new Snap({ source: source });
-  map.addInteraction(snap);
 
-  draw.on('drawend', function () {
+  draw.on('drawend', function (event) {
     map.removeInteraction(draw);
-    map.removeInteraction(snap);
-    document.getElementById('nameModal').style.display = 'block';
+    const geometry = event.feature.getGeometry();
+    const name = prompt("Enter coordinate name:");
+    if (name) {
+      addCoordinate(name, geometry);
+    }
   });
 }
 
-function initializeDataTable(map, view) {
+function initializeDataTable(map) {
   if (dataTableInstance) {
     dataTableInstance.ajax.reload();
     return;
   }
 
   dataTableInstance = new DataTable('#example', {
-    pageLength: 5,
-    ajax: { 
+    pageLength: 7,
+    ajax: {
       url: API_URL,
       dataSrc: 'data',
-      dataFilter: function(data){
-        var json = JSON.parse(data);
-        json.data = json.data.map(item => ({
-          ...item,
-          wkt: new WKT().writeGeometry(new WKT().readGeometry(item.wkt))
-        }));
-        return JSON.stringify(json);
-      }
     },
     columns: [
       { data: 'name', title: 'Name' },
       { data: 'wkt', title: 'WKT' },
       { data: 'id', title: 'ID', visible: false },
       {
-        title: 'Edit',
-        render: (data, type, row) => `<button class="edit-btn" data-id="${row.id}">Edit</button>`,
+        title: 'Zoom',
+        render: (data, type, row) => `<button class="zoom-btn" data-wkt="${row.wkt}">Zoom</button>`,
       },
       {
         title: 'Delete',
         render: (data, type, row) => `<button class="delete-btn" data-id="${row.id}">Delete</button>`,
       },
-      {
-        title: 'Zoom',
-        render: (data, type, row, meta) => `<button class="zoom-btn" data-index="${meta.row}">Zoom</button>`,
-      },
     ],
     drawCallback: function() {
-      $('.edit-btn').on('click', function() { handleEditButton(this); });
+      $('.zoom-btn').on('click', function() { handleZoomButton(this, map); });
       $('.delete-btn').on('click', function() { handleDeleteButton(this); });
-      $('.zoom-btn').on('click', function() { handleZoomButton(this); });
     }
   });
-
-  function handleZoomButton(button) {
-    const index = button.getAttribute('data-index');
-    const wkt = dataTableInstance.row(index).data().wkt;
-    const format = new WKT();
-    const feature = format.readFeature(wkt, {
-      dataProjection: 'EPSG:4326',
-      featureProjection: 'EPSG:3857'
-    });
-    const geometry = feature.getGeometry();
-    const extent = geometry.getExtent();
-    view.fit(extent, { padding: [100, 100, 100, 100], maxZoom: 18 });
-  }
-
-  function handleEditButton(button) {
-    const id = button.getAttribute('data-id');
-    const rowData = dataTableInstance.row($(button).closest('tr')).data();
-    
-    document.getElementById('edit-name').value = rowData.name;
-    document.getElementById('edit-wkt').value = rowData.wkt;
-    document.getElementById('edit-id').value = rowData.id;
-    document.getElementById('editModal').style.display = 'block';
-  }
-
-  function handleDeleteButton(button) {
-    const id = button.getAttribute('data-id');
-    const rowData = dataTableInstance.row($(button).closest('tr')).data();
-    if (confirm(`Are you sure you want to delete the coordinate: ${rowData.name}?`)) {
-      deleteCoordinate(id);
-    }
-  }
 }
 
-async function fetchCoordinates() {
-  try {
-    const response = await fetch(API_URL);
-    const data = await response.json();
-    return data.data;
-  } catch (error) {
-    console.error('Error fetching coordinates:', error);
-    return [];
-  }
-}
-
-// Point türündeki koordinatları filtreleme fonksiyonu
-function filterPoints(coordinates) {
-  const format = new WKT();
-  const pointCoordinates = [];
-
-  coordinates.forEach(coord => {
-    if (coord.wkt) {
-      try {
-        const feature = format.readFeature(coord.wkt, {
-          dataProjection: 'EPSG:4326', // Gelen verinin projeksiyonu
-          featureProjection: 'EPSG:3857' // Harita projeksiyonu
-        });
-
-        if (feature.getGeometry().getType() === 'Point') {
-          pointCoordinates.push(coord);
-        }
-      } catch (error) {
-        console.error('Error parsing WKT:', error, 'for coordinate:', coord);
+function addCoordinate(name, geometry) {
+  const wktFormat = new WKT();
+  const wkt = wktFormat.writeGeometry(geometry.transform('EPSG:3857', 'EPSG:4326'));
+  fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, wkt }),
+  })
+    .then(response => response.json())
+    .then(() => {
+      alert('Coordinate added successfully.');
+      if (dataTableInstance) {
+        dataTableInstance.ajax.reload();
       }
-    } else {
-      console.warn('Invalid or empty WKT value for coordinate:', coord);
-    }
-  });
-
-  return pointCoordinates;
+      loadCoordinates();
+    })
+    .catch(error => alert('Error adding coordinate: ' + error.message));
 }
 
-// Haritaya ikon ekleme fonksiyonu
-function addIconsToMap(coordinates) {
-  const format = new WKT();
+function updateCoordinate(id, updatedCoordinate) {
+  const wktFormat = new WKT();
+  const geometry = wktFormat.readGeometry(updatedCoordinate.wkt);
+  const transformedGeometry = geometry.transform('EPSG:3857', 'EPSG:4326');
+  const transformedWkt = wktFormat.writeGeometry(transformedGeometry);
 
-  coordinates.forEach(coord => {
-    if (coord.wkt) {
-      try {
-        const feature = format.readFeature(coord.wkt, {
+  const payload = {
+    id: id,
+    wkt: transformedWkt,
+    name: updatedCoordinate.name
+  };
+
+  fetch(`${API_URL}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+    .then(response => {
+      if (!response.ok) {
+        return response.text().then(text => {
+          throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
+        });
+      }
+      return response.json();
+    })
+    .then(() => {
+      alert('Coordinate updated successfully.');
+      if (dataTableInstance) {
+        dataTableInstance.ajax.reload();
+      }
+      loadCoordinates();
+    })
+    .catch(error => alert('Error updating coordinate: ' + error.message));
+}
+
+function deleteCoordinate(id) {
+  fetch(`${API_URL}/${id}`, { method: 'DELETE' })
+    .then(response => response.json())
+    .then(() => {
+      alert('Coordinate deleted successfully.');
+      if (dataTableInstance) {
+        dataTableInstance.ajax.reload();
+      }
+      loadCoordinates();
+    })
+    .catch(error => alert('Error deleting coordinate: ' + error.message));
+}
+
+function handleZoomButton(button, map) {
+  const wkt = $(button).data('wkt');
+  const feature = new WKT().readFeature(wkt, {
+    dataProjection: 'EPSG:4326',
+    featureProjection: 'EPSG:3857'
+  });
+  const coordinates = feature.getGeometry().getCoordinates();
+  flyTo(coordinates, map.getView(), function() {});
+  map.getView().fit(feature.getGeometry());
+}
+
+function handleDeleteButton(button) {
+  const id = $(button).data('id');
+  if (confirm('Are you sure you want to delete this coordinate?')) {
+    deleteCoordinate(id);
+  }
+}
+
+function loadCoordinates() {
+  fetch(API_URL)
+    .then(response => response.json())
+    .then(data => {
+      source.clear();
+      const format = new WKT();
+      data.data.forEach(item => {
+        const feature = format.readFeature(item.wkt, {
           dataProjection: 'EPSG:4326',
           featureProjection: 'EPSG:3857'
         });
-
-        feature.setProperties({ id: coord.id, name: coord.name });
+        feature.setProperties(item);
         source.addFeature(feature);
-      } catch (error) {
-        console.error('Error parsing WKT:', error, 'for coordinate:', coord);
+      });
+    })
+    .catch(error => console.error('Error loading coordinates:', error));
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const map = createMap();
+  const popup = createPopup();
+  map.addOverlay(popup);
+
+  loadCoordinates();
+
+  map.on('click', function(evt) {
+    const feature = map.forEachFeatureAtPixel(evt.pixel, function(feature) {
+      return feature;
+    });
+    if (feature) {
+      const coordinates = evt.coordinate;
+      const content = document.getElementById('popup-content');
+      content.innerHTML = `
+        <p><strong>Name:</strong> ${feature.get('name')}</p>
+        <p><strong>WKT:</strong> ${feature.get('wkt')}</p>
+        <button id="update-btn">Update</button>
+        <button id ="delete-btn">Delete</button>
+      `;
+      popup.setPosition(coordinates);
+  
+      document.getElementById('update-btn').onclick = function() {
+        map.removeOverlay(popup);
+        const modify = new Modify({source: source});
+        map.addInteraction(modify);
+        modify.on('modifyend', function(event) {
+          const updatedFeature = event.features.getArray()[0];
+          const newName = prompt("Enter new name for the coordinate:", feature.get('name'));
+          if (newName) {
+            const updatedWkt = new WKT().writeGeometry(updatedFeature.getGeometry());
+            const id = feature.get('id');
+            updateCoordinate(id, { 
+              id: id,
+              wkt: updatedWkt, 
+              name: newName 
+            });
+          }
+          map.removeInteraction(modify);
+          popup.setPosition(coordinates);
+        });
+      };
+      document.getElementById('delete-btn').onclick = function() {
+        const id = feature.get('id')
+        deleteCoordinate(id)
+        popup.setPosition(undefined);
       }
     } else {
-      console.warn('Invalid or empty WKT value for coordinate:', coord);
+      popup.setPosition(undefined);
     }
   });
-}
 
-function addPopupToIcons(map, popupOverlay) {
-  map.on('pointermove', (e) => {
-    const pixel = map.getEventPixel(e.originalEvent);
-    map.getTargetElement().style.cursor = map.hasFeatureAtPixel(pixel) ? 'pointer' : '';
-  });
-
-  map.on('singleclick', (evt) => {
-    const feature = map.forEachFeatureAtPixel(evt.pixel, feature => feature);
-    if (feature) {
-      const geometry = feature.getGeometry();
-      const coord = transform(geometry.getCoordinates(), 'EPSG:3857', 'EPSG:4326');
-      popupElements.content.innerHTML = `
-        <p>Name: ${feature.get('name')}</p>
-        <p>ID: ${feature.get('id')}</p>
-        <p>Longitude: ${coord[0].toFixed(6)}</p>
-        <p>Latitude: ${coord[1].toFixed(6)}</p>
-      `;
-      popupOverlay.setPosition(geometry.getCoordinates());
-    }
-  });
-}
-
-async function addCoordinate(name, geometry) {
-  const wkt = new WKT().writeGeometry(geometry.transform('EPSG:3857', 'EPSG:4326'));
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name, wkt }),
-    });
-    const result = await response.json();
-    if (result.isSucces) {
-      dataTableInstance.ajax.reload();
-      addIconsToMap([{ name, wkt }]);
-    } else {
-      alert('Failed to add coordinate: ' + result.message);
-    }
-  } catch (error) {
-    console.error('Error adding coordinate:', error);
-    alert('Error adding coordinate');
-  }
-}
-
-async function updateCoordinate(id, name, wkt) {
-  try {
-    const response = await fetch(`${API_URL}/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ id, name, wkt }),
-    });
-    const result = await response.json();
-    if (result.isSucces) {
-      dataTableInstance.ajax.reload();
-      source.clear();
-      const coordinates = await fetchCoordinates();
-      addIconsToMap(coordinates);
-    } else {
-      alert('Failed to update coordinate: ' + result.message);
-    }
-  } catch (error) {
-    console.error('Error updating coordinate:', error);
-    alert('Error updating coordinate');
-  }
-}
-
-async function deleteCoordinate(id) {
-  try {
-    const response = await fetch(`${API_URL}/${id}`, {
-      method: 'DELETE',
-    });
-    const result = await response.json();
-    if (result.isSucces) {
-      dataTableInstance.ajax.reload();
-      source.clear();
-      const coordinates = await fetchCoordinates();
-      addIconsToMap(coordinates);
-    } else {
-      alert('Failed to delete coordinate: ' + result.message);
-    }
-  } catch (error) {
-    console.error('Error deleting coordinate:', error);
-    alert('Error deleting coordinate');
-  }
-}
-
-async function main() {
-  const map = createMap();
-  const popupOverlay = createPopupOverlay();
-  map.addOverlay(popupOverlay);
-
-  const coordinates = await fetchCoordinates();
-  const pointCoordinates = filterPoints(coordinates);
-  addIconsToMap(pointCoordinates);
-  addPopupToIcons(map, popupOverlay);
-
-  initializeDataTable(map, map.getView());
-
-  document.getElementById('adddragbtn').addEventListener('click', function() {
-    addInteractions(map, 'Point');
-  });
-
-  document.getElementById('addBtn').addEventListener('click', function() {
-    document.getElementById('addModal').style.display = 'block';
-  });
-
-  document.getElementById('myBtn').addEventListener('click', function() {
+  document.getElementById('show-coordinates-btn').onclick = function () {
     document.getElementById('myModal').style.display = 'block';
-  });
+    initializeDataTable(map);
+  };
 
-  // Modal kapatma işlemleri
-  document.querySelectorAll('.close, .close-add, .close-edit').forEach(el => {
-    el.addEventListener('click', function() {
-      this.closest('.modal').style.display = 'none';
-    });
-  });
+  document.getElementById('add-coordinate-btn').onclick = function () {
+    const type = document.getElementById('type').value;
+    addInteractions(map, type);
+  };
 
-  // Form submit işlemleri
-  document.getElementById('add-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const name = document.getElementById('coordinate-name').value;
-    const wkt = new WKT().writeGeometry(source.getFeatures()[0].getGeometry());
-    addCoordinate(name, wkt);
-    this.closest('.modal').style.display = 'none';
-  });
-
-  document.getElementById('edit-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const id = document.getElementById('edit-id').value;
-    const name = document.getElementById('edit-name').value;
-    const wkt = document.getElementById('edit-wkt').value;
-    updateCoordinate(id, name, wkt);
-    this.closest('.modal').style.display = 'none';
-  });
-}
-
-document.addEventListener('DOMContentLoaded', main);
+  document.getElementsByClassName('close')[0].onclick = function () {
+    document.getElementById('myModal').style.display = 'none';
+  };
+});
