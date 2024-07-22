@@ -41,6 +41,7 @@ const vector = new VectorLayer({
 });
 
 let dataTableInstance = null;
+let drawing = false;
 let draw;
 
 function createMap() {
@@ -88,8 +89,13 @@ function addInteractions(map, type) {
     type: type,
   });
   map.addInteraction(draw);
+  
+  draw.on('drawstart', function(){
+    drawing = true;
+  });
 
   draw.on('drawend', function (event) {
+    drawing = false;
     map.removeInteraction(draw);
     const geometry = event.feature.getGeometry();
     const name = prompt("Enter coordinate name:");
@@ -204,8 +210,6 @@ function handleZoomButton(button, map) {
     dataProjection: 'EPSG:4326',
     featureProjection: 'EPSG:3857'
   });
-  const coordinates = feature.getGeometry().getCoordinates();
-  flyTo(coordinates, map.getView(), function() {});
   map.getView().fit(feature.getGeometry());
 }
 
@@ -242,9 +246,12 @@ document.addEventListener('DOMContentLoaded', function () {
   loadCoordinates();
 
   map.on('click', function(evt) {
+
+    if (drawing) return;
     const feature = map.forEachFeatureAtPixel(evt.pixel, function(feature) {
       return feature;
     });
+
     if (feature) {
       const coordinates = evt.coordinate;
       const content = document.getElementById('popup-content');
