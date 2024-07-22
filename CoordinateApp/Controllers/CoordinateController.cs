@@ -27,13 +27,13 @@ namespace CoordinateApp.Controllers
         }
 
         [HttpPost]
-        public Response Add([FromBody] CoordinateAddDto coordinateAddDto)
+        public Response Add([FromBody] CoordinatesAddDto coordinatesAddDto)
         {
-            return _coordinateService.Add(coordinateAddDto);
+            return _coordinateService.Add(coordinatesAddDto);
         }
 
         [HttpPut]
-        public Response Update([FromBody] CoordinateUpdateDto korFromReq)
+        public Response Update([FromBody] CoordinatesDto korFromReq)
         {
             return _coordinateService.Update(korFromReq);
         }

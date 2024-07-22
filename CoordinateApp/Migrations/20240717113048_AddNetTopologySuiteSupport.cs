@@ -1,24 +1,27 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using NetTopologySuite.Geometries;
 
 #nullable disable
 
 namespace CoordinateApp.Migrations
 {
     /// <inheritdoc />
-    public partial class v1 : Migration
+    public partial class AddNetTopologySuiteSupport : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AlterDatabase()
+                .Annotation("Npgsql:PostgresExtension:postgis", ",,");
+
             migrationBuilder.CreateTable(
                 name: "Coordinates",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false, defaultValueSql: "uuid_generate_v4()"),
-                    X = table.Column<double>(type: "double precision", nullable: false),
-                    Y = table.Column<double>(type: "double precision", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false)
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Geo = table.Column<Geometry>(type: "geometry", nullable: false),
+                    Name = table.Column<string>(type: "character varying", nullable: false)
                 },
                 constraints: table =>
                 {

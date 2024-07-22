@@ -1,14 +1,15 @@
-﻿using CoordinateApp.DataAccess;
+﻿using CoordinateApp.Context;
 using CoordinateApp.Repositories.Abstract;
 using CoordinateApp.Repositories.Concrete;
+using Microsoft.EntityFrameworkCore;
 
 namespace CoordinateApp
 {
     public class UnitOfWork : IUnitOfWork
     {
         private CoordinateRepository _coordinateRepository;
-        private readonly CoordinatesDbContext _context;
-        public UnitOfWork(CoordinatesDbContext context)
+        private readonly CoordinateDbContext _context;
+        public UnitOfWork(CoordinateDbContext context)
         {
             _context = context;
         }

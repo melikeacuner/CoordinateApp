@@ -1,4 +1,5 @@
-﻿using CoordinateApp.Entity;
+﻿using CoordinateApp.Context;
+using CoordinateApp.DataAccess;
 using CoordinateApp.Repositories.Abstract;
 using Microsoft.EntityFrameworkCore;
 
@@ -6,9 +7,9 @@ namespace CoordinateApp.Repositories.Concrete;
 
 public class GenericRepository<T> : IGenericRepository<T> where T : BaseEntity
 {
-    private readonly DbContext _context;
+    private readonly CoordinateDbContext _context;
     protected DbSet<T> _dbSet => _context.Set<T>();
-    public GenericRepository(DbContext context)
+    public GenericRepository(CoordinateDbContext context)
     {
         _context = context;
     }
