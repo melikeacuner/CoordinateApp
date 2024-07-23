@@ -1,4 +1,5 @@
-﻿using CoordinateApp.Entity.Dto;
+﻿using CoordinateApp.Entity;
+using CoordinateApp.Entity.Dto;
 
 namespace CoordinateApp.Services.Abstract
 {
@@ -7,7 +8,7 @@ namespace CoordinateApp.Services.Abstract
         public Response GetAll();
         public Response GetById(Guid id);
         public Response Add(CoordinatesAddDto coordinatesAddDto);
-        public Response Update(CoordinatesDto coordinatesUpdateDto);
+        public Response Update(CoordinatesDto korFromReq); 
         public Response Delete(Guid id);
     }
 }

@@ -1,6 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using NetTopologySuite.Geometries;
-using Npgsql.EntityFrameworkCore.PostgreSQL.NetTopologySuite;
 
 namespace CoordinateApp.Context
 {
